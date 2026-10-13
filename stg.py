@@ -39,7 +39,7 @@ import experiment
 import metrics
 
 NAME = "stg"
-LAM_GRID = (0.01, 0.1, 1.0)
+LAM_GRID = (0.001, 0.01, 0.1)
 SIGMA = 0.5
 HIDDEN = 64
 EPOCHS = 30
