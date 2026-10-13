@@ -1,4 +1,4 @@
-"""LightGBM on CUDA, CatBoost on GPU, then stochastic gates with the shifted lam grid.
+"""LightGBM on CUDA, CatBoost on GPU, then stochastic gates on the shifted lam grid.
 
     pip install catboost
     python run_all.py
@@ -6,13 +6,9 @@
 import sys
 from pathlib import Path
 
-for folder in Path("/kaggle/input").glob("*/*") if Path("/kaggle/input").exists() else []:
-    if folder.is_dir():
-        sys.path.insert(0, str(folder))
-sys.path.insert(0, "/kaggle/input/datasets/luckyjain20/sml-pro")
-
 import experiment
 import stg
+
 
 def make_estimator(name, param, class_weight=True, n_estimators=experiment.N_TREES, n_jobs=-1):
     if name == "lightgbm":
@@ -34,6 +30,7 @@ def make_estimator(name, param, class_weight=True, n_estimators=experiment.N_TRE
         )
     return _orig(name, param, class_weight, n_estimators, n_jobs)
 
+
 _orig = experiment.make_estimator
 experiment.make_estimator = make_estimator
 experiment.ALGORITHMS["catboost"] = {
@@ -41,24 +38,14 @@ experiment.ALGORITHMS["catboost"] = {
 }
 stg.LAM_GRID = (0.001, 0.01, 0.1)
 
-def data_path():
-    candidates = [
-        Path("features.parquet"),
-        Path("/kaggle/input/datasets/luckyjain20/sml-pro/features.parquet"),
-    ]
-    if Path("/kaggle/input").exists():
-        candidates.extend(Path("/kaggle/input").rglob("features.parquet"))
-    for path in candidates:
-        if path.exists():
-            return str(path)
-    raise SystemExit("features.parquet not found")
 
 if __name__ == "__main__":
-    data = data_path()
-    root = "/kaggle/working" if Path("/kaggle/working").exists() else "."
+    data = "features.parquet"
+    if not Path(data).exists():
+        raise SystemExit("put features.parquet in this folder first")
     sys.argv = ["experiment.py", "--algo", "lightgbm", "--algo", "catboost",
-                "--data", data, "--results", f"{root}/results/gpu"]
+                "--data", data, "--results", "results/gpu"]
     experiment.main()
-    experiment.merge_parts(f"{root}/results/gpu")
-    sys.argv = ["stg.py", "--data", data, "--results", f"{root}/results/stg_shift"]
+    experiment.merge_parts("results/gpu")
+    sys.argv = ["stg.py", "--data", data, "--results", "results/stg_shift"]
     stg.main()
